@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Database Setup</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>Database Setup</h1>
+  <button onclick="setupDatabase()">Create Tables</button>
+  <pre id="output"></pre>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://0ec90b57d6e95fcbda19832f.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJib2x0IiwicmVmIjoiMGVjOTBiNTdkNmU5NWZjYmRhMTk4MzJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4ODE1NzQsImV4cCI6MTc1ODg4MTU3NH0.9I8-U0x86Ak8t2DGaIk0HfvTSLsAyzdnz-Nw00mMkKw'
+    );
+
+    async function setupDatabase() {
+      const output = document.getElementById('output');
+      output.textContent = 'Setting up database...\n';
+
+      try {
+        const sql = `
+CREATE TABLE IF NOT EXISTS leads (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_name text NOT NULL,
+  contact_person text NOT NULL,
+  phone text NOT NULL,
+  email text,
+  address text,
+  city text,
+  lead_status text NOT NULL CHECK (lead_status IN ('Hot', 'Warm', 'Cold')),
+  stage text NOT NULL CHECK (stage IN ('Contacted', 'Requirements Received', 'Follow-ups', 'Closed/Won')),
+  next_followup_date timestamptz,
+  interested_services text[],
+  notes_first_call text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  created_by text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS attachments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id uuid NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  file_name text NOT NULL,
+  file_url text NOT NULL,
+  file_type text,
+  uploaded_at timestamptz DEFAULT now(),
+  uploaded_by text NOT NULL
+);
+        `;
+
+        output.textContent += 'SQL to execute:\n' + sql + '\n\n';
+        output.textContent += 'Note: You need to run this SQL in your Supabase SQL Editor.\n';
+        output.textContent += 'Go to: https://supabase.com/dashboard/project/0ec90b57d6e95fcbda19832f/sql\n';
+      } catch (error) {
+        output.textContent += 'Error: ' + error.message + '\n';
+      }
+    }
+  </script>
+</body>
+</html>
