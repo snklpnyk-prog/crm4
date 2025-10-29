@@ -7,17 +7,17 @@ export interface Lead {
   business_name: string;
   contact_person: string;
   phone: string;
-  email?: string;
-  address?: string;
-  city?: string;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
   lead_status: LeadStatus;
   stage: Stage;
-  next_followup_date?: string;
-  interested_services?: string[];
-  notes_first_call?: string;
+  next_followup_date?: string | null;
+  interested_services?: string[] | null;
+  notes_first_call?: string | null;
   created_at: string;
   updated_at: string;
-  created_by: string;
+  created_by?: string | null;
 }
 
 export interface Attachment {

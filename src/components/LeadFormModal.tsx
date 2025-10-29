@@ -35,12 +35,22 @@ export function LeadFormModal({ onClose, onSubmit, userId }: LeadFormModalProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
+
+    const leadData = {
       ...formData,
-      stage: 'Contacted',
+      stage: 'Contacted' as const,
       user_id: userId,
-      created_by: userId
-    });
+      created_by: userId,
+      next_followup_date: formData.next_followup_date ? new Date(formData.next_followup_date).toISOString() : null,
+      interested_services: formData.interested_services.length > 0 ? formData.interested_services : null,
+      email: formData.email || null,
+      address: formData.address || null,
+      city: formData.city || null,
+      notes_first_call: formData.notes_first_call || null
+    };
+
+    console.log('Submitting lead data:', leadData);
+    onSubmit(leadData);
     onClose();
   };
 

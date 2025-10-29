@@ -22,8 +22,11 @@ export function Dashboard() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
 
   useEffect(() => {
-    fetchLeads();
-  }, []);
+    if (user) {
+      console.log('Current user:', user.id, user.email);
+      fetchLeads();
+    }
+  }, [user]);
 
   const fetchLeads = async () => {
     try {
@@ -48,6 +51,8 @@ export function Dashboard() {
 
   const handleAddLead = async (newLead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log('Attempting to add lead:', newLead);
+
       const { data, error } = await supabase
         .from('leads')
         .insert([newLead])
@@ -55,8 +60,8 @@ export function Dashboard() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error adding lead:', error);
-        alert('Failed to add lead. Please check database connection.');
+        console.error('Supabase error details:', error);
+        alert(`Failed to add lead: ${error.message}\n\nDetails: ${error.details || 'No additional details'}\n\nHint: ${error.hint || 'No hint available'}`);
         return;
       }
 
@@ -65,8 +70,8 @@ export function Dashboard() {
         setShowLeadForm(false);
       }
     } catch (error) {
-      console.error('Error adding lead:', error);
-      alert('Failed to add lead. Please try again.');
+      console.error('Unexpected error adding lead:', error);
+      alert(`Failed to add lead: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
