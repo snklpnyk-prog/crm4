@@ -5,7 +5,7 @@ import type { Lead, LeadStatus } from '../lib/types';
 interface LeadFormModalProps {
   onClose: () => void;
   onSubmit: (lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => void;
-  username: string;
+  userId: string;
 }
 
 const SERVICE_OPTIONS = [
@@ -19,7 +19,7 @@ const SERVICE_OPTIONS = [
   'Video Production'
 ];
 
-export function LeadFormModal({ onClose, onSubmit, username }: LeadFormModalProps) {
+export function LeadFormModal({ onClose, onSubmit, userId }: LeadFormModalProps) {
   const [formData, setFormData] = useState({
     business_name: '',
     contact_person: '',
@@ -38,7 +38,8 @@ export function LeadFormModal({ onClose, onSubmit, username }: LeadFormModalProp
     onSubmit({
       ...formData,
       stage: 'Contacted',
-      created_by: username
+      user_id: userId,
+      created_by: userId
     });
     onClose();
   };

@@ -10,7 +10,7 @@ import { FollowUpSidebar } from './FollowUpSidebar';
 import { LeadsSection } from './LeadsSection';
 
 export function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -173,7 +173,7 @@ export function Dashboard() {
               </button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Lead Management</h1>
-                <p className="text-sm text-gray-600">Welcome, {user}</p>
+                <p className="text-sm text-gray-600">Welcome, {user?.email}</p>
               </div>
             </div>
 
@@ -206,7 +206,7 @@ export function Dashboard() {
                 Add Lead
               </button>
               <button
-                onClick={logout}
+                onClick={signOut}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
               >
                 <LogOut className="w-5 h-5" />
@@ -276,7 +276,7 @@ export function Dashboard() {
         <LeadFormModal
           onClose={() => setShowLeadForm(false)}
           onSubmit={handleAddLead}
-          username={user!}
+          userId={user!.id}
         />
       )}
 

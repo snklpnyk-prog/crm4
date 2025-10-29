@@ -3,6 +3,7 @@ export type Stage = 'Contacted' | 'Requirements Received' | 'Follow-ups' | 'Clos
 
 export interface Lead {
   id: string;
+  user_id: string;
   business_name: string;
   contact_person: string;
   phone: string;
