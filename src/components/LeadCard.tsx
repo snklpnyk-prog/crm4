@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Phone, Building2, Calendar, Edit2, Check, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Phone, Building2, Calendar, Edit2, Check, X, MessageSquare } from 'lucide-react';
 import type { Lead, LeadStatus } from '../lib/types';
+import { supabase } from '../lib/supabase';
 
 interface LeadCardProps {
   lead: Lead;
@@ -13,6 +14,29 @@ interface LeadCardProps {
 export function LeadCard({ lead, onDragStart, onDragEnd, onClick, onQuickEdit }: LeadCardProps) {
   const [isEditingDate, setIsEditingDate] = useState(false);
   const [editDate, setEditDate] = useState(lead.next_followup_date || '');
+  const [latestConversation, setLatestConversation] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchLatestConversation();
+  }, [lead.id]);
+
+  const fetchLatestConversation = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('followup_conversations')
+        .select('conversation_text')
+        .eq('lead_id', lead.id)
+        .order('conversation_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        setLatestConversation(data.conversation_text);
+      }
+    } catch (error) {
+      console.error('Error fetching latest conversation:', error);
+    }
+  };
 
   const getStatusColor = (status: LeadStatus) => {
     switch (status) {
@@ -84,9 +108,12 @@ export function LeadCard({ lead, onDragStart, onDragEnd, onClick, onQuickEdit }:
 
       <div className="space-y-2 mt-2">
         <div>
-          <h4 className="font-semibold text-gray-900 text-sm">
-            {lead.contact_person}
+          <h4 className="font-bold text-gray-900 text-base">
+            {lead.business_name}
           </h4>
+          <p className="font-semibold text-gray-700 text-sm mt-1">
+            {lead.contact_person}
+          </p>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-gray-600">
@@ -94,10 +121,16 @@ export function LeadCard({ lead, onDragStart, onDragEnd, onClick, onQuickEdit }:
           <span className="truncate">{lead.phone}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-gray-600">
-          <Building2 className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate">{lead.business_name}</span>
-        </div>
+        {latestConversation && (
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex items-start gap-2">
+              <MessageSquare className="w-3 h-3 flex-shrink-0 text-gray-400 mt-0.5" />
+              <p className="text-xs text-gray-500 line-clamp-2">
+                {latestConversation}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="pt-2 border-t border-gray-100">
           {!isEditingDate ? (

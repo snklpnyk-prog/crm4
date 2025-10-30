@@ -30,6 +30,16 @@ export interface Attachment {
   uploaded_by: string;
 }
 
+export interface FollowUpConversation {
+  id: string;
+  lead_id: string;
+  created_by: string;
+  conversation_text: string;
+  conversation_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -42,6 +52,11 @@ export interface Database {
         Row: Attachment;
         Insert: Omit<Attachment, 'id' | 'uploaded_at'>;
         Update: Partial<Omit<Attachment, 'id' | 'uploaded_at'>>;
+      };
+      followup_conversations: {
+        Row: FollowUpConversation;
+        Insert: Omit<FollowUpConversation, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<FollowUpConversation, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };

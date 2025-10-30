@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, LogOut, Filter, X, List, LayoutGrid } from 'lucide-react';
+import { Plus, LogOut, Filter, X, List, LayoutGrid, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Lead } from '../lib/types';
@@ -18,6 +18,7 @@ export function Dashboard() {
   const [followUpFilter, setFollowUpFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('');
   const [serviceFilter, setServiceFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
 
@@ -125,7 +126,7 @@ export function Dashboard() {
     }
   };
 
-  const getFilteredLeads = () => {
+  const getFilteredLeads = async () => {
     let filtered = [...leads];
 
     if (cityFilter) {
@@ -142,8 +143,38 @@ export function Dashboard() {
       );
     }
 
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+
+      const { data: conversationData } = await supabase
+        .from('followup_conversations')
+        .select('lead_id')
+        .ilike('conversation_text', `%${query}%`);
+
+      const conversationLeadIds = new Set(conversationData?.map(c => c.lead_id) || []);
+
+      filtered = filtered.filter(lead =>
+        lead.business_name?.toLowerCase().includes(query) ||
+        lead.contact_person?.toLowerCase().includes(query) ||
+        lead.phone?.includes(query) ||
+        lead.email?.toLowerCase().includes(query) ||
+        lead.notes_first_call?.toLowerCase().includes(query) ||
+        conversationLeadIds.has(lead.id)
+      );
+    }
+
     return filtered;
   };
+
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+
+  useEffect(() => {
+    const applyFilters = async () => {
+      const filtered = await getFilteredLeads();
+      setFilteredLeads(filtered);
+    };
+    applyFilters();
+  }, [leads, cityFilter, serviceFilter, searchQuery]);
 
   const uniqueCities = Array.from(new Set(leads.map(lead => lead.city).filter(Boolean)));
 
@@ -159,7 +190,7 @@ export function Dashboard() {
     <div className="min-h-screen bg-gray-50 flex">
       {showSidebar && (
         <FollowUpSidebar
-          leads={leads}
+          leads={filteredLeads}
           onLeadSelect={setSelectedLead}
           selectedFilter={followUpFilter}
           onFilterChange={setFollowUpFilter}
@@ -183,6 +214,24 @@ export function Dashboard() {
             </div>
 
             <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search leads by name, phone, conversation..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-80 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               <div className="flex gap-2 border border-gray-300 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setViewMode('kanban')}
@@ -253,7 +302,7 @@ export function Dashboard() {
             )}
 
             <div className="ml-auto text-sm text-gray-600 flex items-center">
-              Total Leads: <span className="font-semibold ml-1">{getFilteredLeads().length}</span>
+              Total Leads: <span className="font-semibold ml-1">{filteredLeads.length}</span>
             </div>
           </div>
         </header>
@@ -262,14 +311,14 @@ export function Dashboard() {
           {viewMode === 'kanban' ? (
             <div className="p-6">
               <KanbanBoard
-                leads={getFilteredLeads()}
+                leads={filteredLeads}
                 onUpdateLead={handleUpdateLead}
                 onSelectLead={setSelectedLead}
               />
             </div>
           ) : (
             <LeadsSection
-              leads={leads}
+              leads={filteredLeads}
               onUpdateLead={handleUpdateLead}
               onDeleteLead={handleDeleteLead}
             />

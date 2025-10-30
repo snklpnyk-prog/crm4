@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { X, Phone, Mail, MapPin, Building2, Calendar, FileText, Tag, Pencil, Save } from 'lucide-react';
-import type { Lead, LeadStatus } from '../lib/types';
+import { useState, useEffect } from 'react';
+import { X, Phone, Mail, MapPin, Building2, Calendar, FileText, Tag, Pencil, Save, MessageSquarePlus, Clock } from 'lucide-react';
+import type { Lead, LeadStatus, FollowUpConversation } from '../lib/types';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 interface LeadDetailModalProps {
   lead: Lead;
@@ -20,7 +22,13 @@ const SERVICE_OPTIONS = [
 ];
 
 export function LeadDetailModal({ lead, onClose, onUpdate }: LeadDetailModalProps) {
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [conversations, setConversations] = useState<FollowUpConversation[]>([]);
+  const [showAddConversation, setShowAddConversation] = useState(false);
+  const [newConversation, setNewConversation] = useState('');
+  const [conversationDate, setConversationDate] = useState('');
+  const [loadingConversations, setLoadingConversations] = useState(true);
   const [editData, setEditData] = useState({
     business_name: lead.business_name,
     contact_person: lead.contact_person,
@@ -34,9 +42,62 @@ export function LeadDetailModal({ lead, onClose, onUpdate }: LeadDetailModalProp
     notes_first_call: lead.notes_first_call || ''
   });
 
+  useEffect(() => {
+    fetchConversations();
+  }, [lead.id]);
+
+  const fetchConversations = async () => {
+    try {
+      setLoadingConversations(true);
+      const { data, error } = await supabase
+        .from('followup_conversations')
+        .select('*')
+        .eq('lead_id', lead.id)
+        .order('conversation_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching conversations:', error);
+      } else {
+        setConversations(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
+
   const handleSave = () => {
     onUpdate(lead.id, editData);
     setIsEditing(false);
+  };
+
+  const handleAddConversation = async () => {
+    if (!newConversation.trim() || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('followup_conversations')
+        .insert({
+          lead_id: lead.id,
+          created_by: user.id,
+          conversation_text: newConversation,
+          conversation_date: conversationDate || new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Error adding conversation:', error);
+        alert('Failed to add conversation');
+      } else {
+        setNewConversation('');
+        setConversationDate('');
+        setShowAddConversation(false);
+        fetchConversations();
+      }
+    } catch (error) {
+      console.error('Error adding conversation:', error);
+      alert('Failed to add conversation');
+    }
   };
 
   const handleServiceToggle = (service: string) => {
@@ -310,17 +371,101 @@ export function LeadDetailModal({ lead, onClose, onUpdate }: LeadDetailModalProp
             )}
           </div>
 
-          <div className="pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Created by:</span>
-                <span className="ml-2 text-gray-900 font-medium">{lead.created_by}</span>
+          <div className="pt-4 border-t border-gray-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Follow-up Conversations</h3>
+              <button
+                onClick={() => setShowAddConversation(!showAddConversation)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+              >
+                <MessageSquarePlus className="w-4 h-4" />
+                Add Conversation
+              </button>
+            </div>
+
+            {showAddConversation && (
+              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Conversation Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={conversationDate}
+                    onChange={(e) => setConversationDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Conversation Notes</label>
+                  <textarea
+                    value={newConversation}
+                    onChange={(e) => setNewConversation(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                    placeholder="Add details about this conversation..."
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowAddConversation(false);
+                      setNewConversation('');
+                      setConversationDate('');
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddConversation}
+                    disabled={!newConversation.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Save Conversation
+                  </button>
+                </div>
               </div>
-              <div>
-                <span className="text-gray-500">Created at:</span>
-                <span className="ml-2 text-gray-900 font-medium">
-                  {new Date(lead.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
+            )}
+
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              {loadingConversations ? (
+                <p className="text-gray-500 text-sm text-center py-4">Loading conversations...</p>
+              ) : conversations.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">No conversations yet. Add the first one!</p>
+              ) : (
+                conversations.map((conv) => (
+                  <div key={conv.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Clock className="w-3 h-3" />
+                        <span>
+                          {new Date(conv.conversation_date).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-gray-900 text-sm whitespace-pre-wrap">{conv.conversation_text}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Created by:</span>
+                  <span className="ml-2 text-gray-900 font-medium">{lead.created_by}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Created at:</span>
+                  <span className="ml-2 text-gray-900 font-medium">
+                    {new Date(lead.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

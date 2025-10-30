@@ -63,7 +63,7 @@ export function KanbanBoard({ leads, onUpdateLead, onSelectLead }: KanbanBoardPr
             </div>
 
             <div
-              className={`bg-gray-50 rounded-b-lg p-3 min-h-[600px] space-y-3 transition-colors ${
+              className={`bg-gray-50 rounded-b-lg p-3 min-h-[600px] max-h-[600px] overflow-y-auto space-y-3 transition-colors ${
                 isDragOver ? 'bg-blue-50 ring-2 ring-blue-300' : ''
               }`}
               onDragOver={(e) => handleDragOver(e, stage)}
